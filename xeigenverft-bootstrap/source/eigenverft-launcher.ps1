@@ -1,0 +1,28 @@
+. "$PSScriptRoot/scripts/Out-Log.ps1"
+. "$PSScriptRoot/scripts/Wait-PressKey.ps1"
+. "$PSScriptRoot/scripts/Get-OsName.ps1"
+. "$PSScriptRoot/scripts/Invoke-CSharpCompilationEx.ps1"
+
+. "$PSScriptRoot/eigenverft-launcher.config.ps1"
+
+Clear-Host
+
+Out-Log @Logconfig -Level Information -Template "{Name} {State}." -Params @{ Name = 'eigenverft-launcher'; State = 'started' }
+
+$osName = Get-OsName
+
+Out-Log @Logconfig -Level Information -Template "Detecting operating system. {OsName}" -Params @{ OsName = $osName }
+
+if ($osName -notlike 'windows') {
+    Out-Log @Logconfig -Level Warning -Template "This script is designed for Windows PowerShell. Compatibility on {OsName} is not supported." -Params @{ OsName = $osName }
+    exit 1
+}
+
+try {
+    $r = Invoke-BuildIfRequired -SourceDir $PSScriptRoot\src -AssemblyName Eigenverft.Bootstrapper -ThisVersion 1.3.0.3 -OutPath $PSScriptRoot\out -Quiet
+    & $r.Executable.FullName
+}
+catch {
+    Out-Log @Logconfig -Level Error -Template "Error: @Messsage: {ExceptionMessage} @Script: {ExceptionScriptName} @Line: {ExceptionLineNumber} @At: {ExceptionLine}" -Params @{ ExceptionMessage = $_.Exception.Message; ExceptionScriptName = $_.InvocationInfo.ScriptName ; ExceptionLineNumber = $_.InvocationInfo.ScriptLineNumber ; ExceptionLine = $_.InvocationInfo.Line.Trim() }
+    Start-Sleep -Milliseconds 3000
+}
